@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tag Viewer</title>
+  <style>
+    body { font-family: sans-serif; background: #f8f8f8; padding: 2rem; max-width: 600px; margin: auto; }
+    .container { background: white; padding: 1rem 2rem; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    img { max-width: 100%; border-radius: 8px; margin-top: 1rem; }
+    h2 { margin-top: 0; }
+    .info-line { margin-bottom: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Tag Information</h2>
+    <div id="info"></div>
+    <img id="photo" alt="Tag Photo" />
+  </div>
+
+  <script>
+    const tagId = "12345";
+    const baseUrl = "https://qzjoylehnxitrddwmcqp.supabase.co/storage/v1/object/public/tag-public";
+
+    const infoUrl = `${baseUrl}/${tagId}/info.json`;
+    const photoUrl = `${baseUrl}/${tagId}/photo.png`;
+
+    fetch(infoUrl)
+      .then(response => response.json())
+      .then(data => {
+        const container = document.getElementById("info");
+        for (const [key, value] of Object.entries(data)) {
+          const div = document.createElement("div");
+          div.className = "info-line";
+          div.innerHTML = `<strong>${key}:</strong> ${value}`;
+          container.appendChild(div);
+        }
+      })
+      .catch(error => {
+        document.getElementById("info").textContent = "Error loading tag info.";
+        console.error(error);
+      });
+
+    document.getElementById("photo").src = photoUrl;
+  </script>
+</body>
+</html>
