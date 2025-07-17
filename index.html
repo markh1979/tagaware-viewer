@@ -43,6 +43,7 @@
     const tagId = new URLSearchParams(window.location.search).get("tagId");
     const bucketUrl = "https://qzjoylehnxitrddwmcqp.supabase.co/storage/v1/object/public/tag-public";
     const container = document.getElementById("tag-info");
+    const cacheBuster = `?ts=${Date.now()}`;
 
     async function loadTagData() {
       if (!tagId) {
@@ -67,23 +68,27 @@
           <p><strong>Timestamp:</strong> ${data.timestamp}</p>
         `;
 
-        // Attempt to load multiple images: photo1.png or photo1.jpg, etc.
+        // Attempt to load multiple images with cache busting
         const maxPhotos = 5;
         for (let i = 1; i <= maxPhotos; i++) {
-          let imgUrlPng = `${bucketUrl}/${tagId}/photo${i}.png`;
-          let imgUrlJpg = `${bucketUrl}/${tagId}/photo${i}.jpg`;
+          const imgUrlPng = `${bucketUrl}/${tagId}/photo${i}.png${cacheBuster}`;
+          const imgUrlJpg = `${bucketUrl}/${tagId}/photo${i}.jpg${cacheBuster}`;
 
-          const pngRes = await fetch(imgUrlPng);
-          if (pngRes.ok) {
-            html += `<img src="${imgUrlPng}" alt="Tag Photo ${i}" />`;
-            continue;
-          }
+          try {
+            const res = await fetch(imgUrlPng, { method: 'HEAD' });
+            if (res.ok) {
+              html += `<img src="${imgUrlPng}" alt="Tag Photo ${i}" />`;
+              continue;
+            }
+          } catch {}
 
-          const jpgRes = await fetch(imgUrlJpg);
-          if (jpgRes.ok) {
-            html += `<img src="${imgUrlJpg}" alt="Tag Photo ${i}" />`;
-            continue;
-          }
+          try {
+            const res = await fetch(imgUrlJpg, { method: 'HEAD' });
+            if (res.ok) {
+              html += `<img src="${imgUrlJpg}" alt="Tag Photo ${i}" />`;
+              continue;
+            }
+          } catch {}
         }
 
         container.innerHTML = html;
