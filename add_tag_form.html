@@ -59,68 +59,71 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script>
-    const supabase = supabase.createClient(
-      document.getElementById("SUPABASE_URL").value,
-      document.getElementById("SUPABASE_ANON_KEY").value
-    );
+    window.onload = function () {
+      const supabase = supabase.createClient(
+        document.getElementById("SUPABASE_URL").value,
+        document.getElementById("SUPABASE_ANON_KEY").value
+      );
 
-    const qr = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-    qr.render((decodedText) => {
-      document.getElementById("tagId").value = decodedText;
-      qr.clear();
-      document.getElementById("reader").innerHTML = "✅ QR scanned.";
-    }, (error) => {});
+      const qr = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+      qr.render((decodedText) => {
+        document.getElementById("tagId").value = decodedText;
+        qr.clear();
+        document.getElementById("reader").innerHTML = "✅ QR scanned.";
+      }, (error) => {});
 
-    document.getElementById("photos").addEventListener("change", function () {
-      const preview = document.getElementById("preview");
-      preview.innerHTML = "";
-      [...this.files].forEach(file => {
-        const reader = new FileReader();
-        reader.onload = e => {
-          const img = document.createElement("img");
-          img.src = e.target.result;
-          preview.appendChild(img);
-        };
-        reader.readAsDataURL(file);
+      document.getElementById("photos").addEventListener("change", function () {
+        const preview = document.getElementById("preview");
+        preview.innerHTML = "";
+        const files = Array.from(this.files);
+        files.forEach(file => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const img = document.createElement("img");
+            img.src = e.target.result;
+            preview.appendChild(img);
+          };
+          reader.readAsDataURL(file);
+        });
       });
-    });
 
-    document.getElementById("tagForm").addEventListener("submit", async function (e) {
-      e.preventDefault();
-      const tagId = document.getElementById("tagId").value.trim();
-      const tagType = document.getElementById("tagType").value;
-      const equipment = document.getElementById("equipment").value;
-      const reason = document.getElementById("reason").value;
-      const addedBy = document.getElementById("addedBy").value;
-      const area = document.getElementById("area").value;
-      const gps = document.getElementById("gps").value;
-      const timestamp = new Date().toISOString();
-      const photos = document.getElementById("photos").files;
+      document.getElementById("tagForm").addEventListener("submit", async function (e) {
+        e.preventDefault();
+        const tagId = document.getElementById("tagId").value.trim();
+        const tagType = document.getElementById("tagType").value;
+        const equipment = document.getElementById("equipment").value;
+        const reason = document.getElementById("reason").value;
+        const addedBy = document.getElementById("addedBy").value;
+        const area = document.getElementById("area").value;
+        const gps = document.getElementById("gps").value;
+        const timestamp = new Date().toISOString();
+        const photos = document.getElementById("photos").files;
 
-      const info = { tagId, tagType, equipment, reason, addedBy, area, gps, timestamp };
-      const infoBlob = new Blob([JSON.stringify(info, null, 2)], { type: "application/json" });
+        const info = { tagId, tagType, equipment, reason, addedBy, area, gps, timestamp };
+        const infoBlob = new Blob([JSON.stringify(info, null, 2)], { type: "application/json" });
 
-      const { error: infoError } = await supabase.storage
-        .from("tag-public")
-        .upload(`${tagId}/info.json`, infoBlob, { upsert: true });
-
-      if (infoError) return alert("❌ Info upload failed: " + infoError.message);
-
-      for (let i = 0; i < photos.length; i++) {
-        const file = photos[i];
-        const ext = file.name.split('.').pop();
-        const path = `${tagId}/photo${i + 1}.${ext}`;
-        const { error: photoErr } = await supabase.storage
+        const { error: infoError } = await supabase.storage
           .from("tag-public")
-          .upload(path, file, { upsert: true });
-        if (photoErr) return alert("❌ Photo upload failed: " + photoErr.message);
-      }
+          .upload(`${tagId}/info.json`, infoBlob, { upsert: true });
 
-      alert("✅ Tag registered!");
-      this.reset();
-      document.getElementById("preview").innerHTML = "";
-      document.getElementById("reader").innerHTML = "";
-    });
+        if (infoError) return alert("❌ Info upload failed: " + infoError.message);
+
+        for (let i = 0; i < photos.length; i++) {
+          const file = photos[i];
+          const ext = file.name.split('.').pop();
+          const path = `${tagId}/photo${i + 1}.${ext}`;
+          const { error: photoErr } = await supabase.storage
+            .from("tag-public")
+            .upload(path, file, { upsert: true });
+          if (photoErr) return alert("❌ Photo upload failed: " + photoErr.message);
+        }
+
+        alert("✅ Tag registered!");
+        this.reset();
+        document.getElementById("preview").innerHTML = "";
+        document.getElementById("reader").innerHTML = "";
+      });
+    };
   </script>
 </body>
 </html>
