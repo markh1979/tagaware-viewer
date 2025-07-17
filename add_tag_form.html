@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Add New Tag - TagAware</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f1f1f1;
+      padding: 2em;
+    }
+    form {
+      background: #fff;
+      padding: 2em;
+      border-radius: 8px;
+      max-width: 600px;
+      margin: auto;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    label {
+      display: block;
+      margin-top: 1em;
+    }
+    input, textarea, select {
+      width: 100%;
+      padding: 0.5em;
+      margin-top: 0.3em;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    input[type="file"] {
+      border: none;
+    }
+    button {
+      margin-top: 1.5em;
+      padding: 0.75em 1.5em;
+      background: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 1em;
+    }
+    h1 {
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Add a New Tag</h1>
+  <form id="tagForm">
+    <label for="tagId">Tag ID (from pre-printed QR):</label>
+    <input type="text" id="tagId" name="tagId" required />
+
+    <label for="equipment">Equipment Name:</label>
+    <input type="text" id="equipment" name="equipment" required />
+
+    <label for="reason">Reason for Tagging:</label>
+    <textarea id="reason" name="reason" required></textarea>
+
+    <label for="addedBy">Your Name:</label>
+    <input type="text" id="addedBy" name="addedBy" required />
+
+    <label for="area">Area:</label>
+    <input type="text" id="area" name="area" required />
+
+    <label for="gps">GPS Coordinates:</label>
+    <input type="text" id="gps" name="gps" placeholder="-22.345, 118.123" required />
+
+    <label for="photos">Upload up to 5 Photos:</label>
+    <input type="file" id="photos" name="photos" accept="image/png, image/jpeg" multiple required />
+
+    <button type="submit">Submit Tag</button>
+  </form>
+
+  <script>
+    document.getElementById("tagForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      alert("This is a frontend placeholder only. Backend upload to Supabase not yet connected.");
+      // Later: handle Supabase auth, storage upload, and info.json generation here
+    });
+  </script>
+</body>
+</html>
