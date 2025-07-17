@@ -54,6 +54,9 @@
 <body>
   <h1>Add a New Tag</h1>
   <form id="tagForm">
+  <input type="hidden" id="SUPABASE_URL" value="https://qzjoylehnxitrddwmcqp.supabase.co" />
+  <input type="hidden" id="SUPABASE_ANON_KEY" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6am95bGVobnhpdHJkZHdtY3FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1NTIzMDksImV4cCI6MjA2ODEyODMwOX0.6RSKoL97XuUiA46knx5Sa20i9JCCE94hY-Dt7Iiaj64" />
+
     <label for="tagId">Tag ID (scanned):</label>
     <input type="text" id="tagId" name="tagId" readonly required />
     <div id="reader"></div>
@@ -116,5 +119,72 @@
       alert("This is a frontend placeholder only. Backend upload to Supabase not yet connected.");
     });
   </script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const supabaseUrl = document.getElementById("SUPABASE_URL").value;
+  const supabaseKey = document.getElementById("SUPABASE_ANON_KEY").value;
+  const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+  document.getElementById("tagForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    const tagId = document.getElementById("tagId").value.trim();
+    const tagType = document.getElementById("tagType").value;
+    const equipment = document.getElementById("equipment").value;
+    const reason = document.getElementById("reason").value;
+    const addedBy = document.getElementById("addedBy").value;
+    const area = document.getElementById("area").value;
+    const gps = document.getElementById("gps").value;
+    const timestamp = new Date().toISOString();
+    const photos = document.getElementById("photos").files;
+
+    if (!tagId) {
+      alert("Please scan a QR code to get the Tag ID.");
+      return;
+    }
+
+    const info = {
+      tagId,
+      tagType,
+      equipment,
+      reason,
+      addedBy,
+      area,
+      gps,
+      timestamp
+    };
+
+    const infoBlob = new Blob([JSON.stringify(info, null, 2)], { type: "application/json" });
+    const { error: infoError } = await supabase.storage
+      .from("tag-public")
+      .upload(`${tagId}/info.json`, infoBlob, { upsert: true, contentType: "application/json" });
+
+    if (infoError) {
+      alert("Failed to upload tag info: " + infoError.message);
+      return;
+    }
+
+    for (let i = 0; i < photos.length; i++) {
+      const photo = photos[i];
+      const ext = photo.name.split('.').pop();
+      const path = `${tagId}/photo${i + 1}.${ext}`;
+
+      const { error: photoError } = await supabase.storage
+        .from("tag-public")
+        .upload(path, photo, { upsert: true });
+
+      if (photoError) {
+        alert("Failed to upload photo: " + photoError.message);
+        return;
+      }
+    }
+
+    alert("✅ Tag successfully registered!");
+    document.getElementById("tagForm").reset();
+    document.getElementById("reader").innerHTML = "";
+  });
+</script>
+
 </body>
 </html>
