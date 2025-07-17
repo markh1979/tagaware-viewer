@@ -59,7 +59,19 @@
     <div id="reader"></div>
     <button type="button" onclick="startScanner()">Scan QR Code</button>
 
+    
+    <label for="tagType">Tag Type:</label>
+    <select id="tagType" name="tagType" required>
+      <option value="">-- Select Tag Type --</option>
+      <option value="Information tag">Information tag</option>
+      <option value="Out of service tag">Out of service tag</option>
+      <option value="Danger tag">Danger tag</option>
+      <option value="Isolation tag">Isolation tag</option>
+      <option value="Scaffold tag">Scaffold tag</option>
+    </select>
+
     <label for="equipment">Equipment Name:</label>
+    
     <input type="text" id="equipment" name="equipment" required />
 
     <label for="reason">Reason for Tagging:</label>
