@@ -11,7 +11,7 @@
     input, select, textarea { width: 100%; padding: 8px; margin-top: 5px; }
     #preview img { max-height: 100px; margin: 5px; }
     #reader { margin-top: 20px; }
-    button.scan-btn { background: #444; color: white; padding: 10px; border: none; margin-top: 10px; border-radius: 4px; }
+    .scan-btn { background: #333; color: white; padding: 10px 15px; border: none; border-radius: 5px; margin-top: 10px; }
   </style>
 </head>
 <body>
@@ -22,7 +22,7 @@
 
     <label for="tagId">Tag ID (from QR):</label>
     <input type="text" id="tagId" name="tagId" readonly required />
-    <button type="button" class="scan-btn" onclick="startQrScanner()">📷 Scan QR Code</button>
+    <button type="button" class="scan-btn" onclick="startScanner()">📷 Scan QR Code</button>
     <div id="reader"></div>
 
     <label for="tagType">Tag Type:</label>
@@ -58,39 +58,49 @@
   </form>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
   <script>
     const supabase = supabase.createClient(
       document.getElementById("SUPABASE_URL").value,
       document.getElementById("SUPABASE_ANON_KEY").value
     );
 
-    let qrScanner = null;
+    let html5QrCode;
 
-    function startQrScanner() {
-      const reader = document.getElementById("reader");
-      reader.innerHTML = "";
-      qrScanner = new Html5Qrcode("reader");
-      qrScanner.start(
+    async function startScanner() {
+      const readerDiv = document.getElementById("reader");
+      readerDiv.innerHTML = "";
+      if (html5QrCode) {
+        await html5QrCode.stop();
+      }
+
+      html5QrCode = new Html5Qrcode("reader");
+
+      html5QrCode.start(
         { facingMode: "environment" },
         { fps: 10, qrbox: 250 },
         (decodedText) => {
           document.getElementById("tagId").value = decodedText;
-          qrScanner.stop();
-          reader.innerHTML = "✅ QR Code Scanned";
+          html5QrCode.stop().then(() => {
+            readerDiv.innerHTML = "✅ QR Code Scanned";
+          }).catch(err => {
+            console.error("Stop failed:", err);
+          });
         },
-        (errorMessage) => { console.log("QR error:", errorMessage); }
-      ).catch((err) => {
-        reader.innerHTML = "<p style='color:red'>Unable to access camera: " + err + "</p>";
+        (errorMessage) => {
+          console.log("QR scan error", errorMessage);
+        }
+      ).catch(err => {
+        readerDiv.innerHTML = "<p style='color:red'>Camera error: " + err + "</p>";
       });
     }
 
     document.getElementById("photos").addEventListener("change", function () {
       const preview = document.getElementById("preview");
       preview.innerHTML = "";
-      Array.from(this.files).forEach(file => {
+      Array.from(this.files).forEach((file) => {
         const reader = new FileReader();
-        reader.onload = e => {
+        reader.onload = function (e) {
           const img = document.createElement("img");
           img.src = e.target.result;
           preview.appendChild(img);
