@@ -44,13 +44,20 @@
     h1 {
       text-align: center;
     }
+    #reader {
+      width: 100%;
+      margin-top: 1em;
+    }
   </style>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
 <body>
   <h1>Add a New Tag</h1>
   <form id="tagForm">
-    <label for="tagId">Tag ID (from pre-printed QR):</label>
-    <input type="text" id="tagId" name="tagId" required />
+    <label for="tagId">Tag ID (scanned):</label>
+    <input type="text" id="tagId" name="tagId" readonly required />
+    <div id="reader"></div>
+    <button type="button" onclick="startScanner()">Scan QR Code</button>
 
     <label for="equipment">Equipment Name:</label>
     <input type="text" id="equipment" name="equipment" required />
@@ -74,10 +81,27 @@
   </form>
 
   <script>
-    document.getElementById("tagForm").addEventListener("submit", async function (e) {
+    function startScanner() {
+      const html5QrCode = new Html5Qrcode("reader");
+      html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        (decodedText) => {
+          document.getElementById("tagId").value = decodedText;
+          html5QrCode.stop();
+          document.getElementById("reader").innerHTML = "<p>QR code scanned successfully!</p>";
+        },
+        (errorMessage) => {
+          console.log("QR error: ", errorMessage);
+        }
+      ).catch((err) => {
+        console.error("Unable to start scanner", err);
+      });
+    }
+
+    document.getElementById("tagForm").addEventListener("submit", function (e) {
       e.preventDefault();
       alert("This is a frontend placeholder only. Backend upload to Supabase not yet connected.");
-      // Later: handle Supabase auth, storage upload, and info.json generation here
     });
   </script>
 </body>
