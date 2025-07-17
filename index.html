@@ -41,7 +41,6 @@
 
   <script>
     const tagId = new URLSearchParams(window.location.search).get("tagId");
-
     const bucketUrl = "https://qzjoylehnxitrddwmcqp.supabase.co/storage/v1/object/public/tag-public";
     const container = document.getElementById("tag-info");
 
@@ -68,11 +67,14 @@
           <p><strong>Timestamp:</strong> ${data.timestamp}</p>
         `;
 
-        // Try to load image
-        const imageUrl = `${bucketUrl}/${tagId}/photo.png`;
-        const imgCheck = await fetch(imageUrl);
-        if (imgCheck.ok) {
-          html += `<img src="${imageUrl}" alt="Tag Photo"/>`;
+        // Attempt to load multiple images: photo1.png, photo2.png, photo3.png
+        const maxPhotos = 5;
+        for (let i = 1; i <= maxPhotos; i++) {
+          const imageUrl = `${bucketUrl}/${tagId}/photo${i}.png`;
+          const imgCheck = await fetch(imageUrl);
+          if (imgCheck.ok) {
+            html += `<img src="${imageUrl}" alt="Tag Photo ${i}" />`;
+          }
         }
 
         container.innerHTML = html;
