@@ -1,68 +1,26 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Add New Tag - TagAware</title>
+  <title>Add Tag - TagAware</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f1f1f1;
-      padding: 2em;
-    }
-    form {
-      background: #fff;
-      padding: 2em;
-      border-radius: 8px;
-      max-width: 600px;
-      margin: auto;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    label {
-      display: block;
-      margin-top: 1em;
-    }
-    input, textarea, select {
-      width: 100%;
-      padding: 0.5em;
-      margin-top: 0.3em;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-    input[type="file"] {
-      border: none;
-    }
-    button {
-      margin-top: 1.5em;
-      padding: 0.75em 1.5em;
-      background: #007BFF;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      font-size: 1em;
-    }
-    h1 {
-      text-align: center;
-    }
-    #reader {
-      width: 100%;
-      margin-top: 1em;
-    }
+    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
+    label { display: block; margin-top: 15px; }
+    input, select, textarea { width: 100%; padding: 8px; margin-top: 5px; }
+    #preview img { max-height: 100px; margin: 5px; }
   </style>
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
 <body>
-  <h1>Add a New Tag</h1>
+  <h2>Add New Tag</h2>
   <form id="tagForm">
-  <input type="hidden" id="SUPABASE_URL" value="https://qzjoylehnxitrddwmcqp.supabase.co" />
-  <input type="hidden" id="SUPABASE_ANON_KEY" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6am95bGVobnhpdHJkZHdtY3FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1NTIzMDksImV4cCI6MjA2ODEyODMwOX0.6RSKoL97XuUiA46knx5Sa20i9JCCE94hY-Dt7Iiaj64" />
+    <input type="hidden" id="SUPABASE_URL" value="https://qzjoylehnxitrddwmcqp.supabase.co" />
+    <input type="hidden" id="SUPABASE_ANON_KEY" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6am95bGVobnhpdHJkZHdtY3FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1NTIzMDksImV4cCI6MjA2ODEyODMwOX0.6RSKoL97XuUiA46knx5Sa20i9JCCE94hY-Dt7Iiaj64" />
 
-    <label for="tagId">Tag ID (scanned):</label>
+    <label for="tagId">Tag ID (from QR):</label>
     <input type="text" id="tagId" name="tagId" readonly required />
-    <div id="reader"></div>
-    <button type="button" onclick="startScanner()">Scan QR Code</button>
 
-    
     <label for="tagType">Tag Type:</label>
     <select id="tagType" name="tagType" required>
       <option value="">-- Select Tag Type --</option>
@@ -74,117 +32,103 @@
     </select>
 
     <label for="equipment">Equipment Name:</label>
-    
-    <input type="text" id="equipment" name="equipment" required />
+    <input type="text" id="equipment" required />
 
-    <label for="reason">Reason for Tagging:</label>
-    <textarea id="reason" name="reason" required></textarea>
+    <label for="reason">Reason:</label>
+    <textarea id="reason" required></textarea>
 
-    <label for="addedBy">Your Name:</label>
-    <input type="text" id="addedBy" name="addedBy" required />
+    <label for="addedBy">Added By (Name):</label>
+    <input type="text" id="addedBy" required />
 
-    <label for="area">Area:</label>
-    <input type="text" id="area" name="area" required />
+    <label for="area">Area Name:</label>
+    <input type="text" id="area" required />
 
     <label for="gps">GPS Coordinates:</label>
-    <input type="text" id="gps" name="gps" placeholder="-22.345, 118.123" required />
+    <input type="text" id="gps" required />
 
     <label for="photos">Upload up to 5 Photos:</label>
-    <input type="file" id="photos" name="photos" accept="image/png, image/jpeg" multiple required />
+    <input type="file" id="photos" accept="image/*" multiple />
+    <div id="preview"></div>
 
-    <button type="submit">Submit Tag</button>
+    <button type="submit">Register Tag</button>
   </form>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script>
-    function startScanner() {
-      const html5QrCode = new Html5Qrcode("reader");
-      html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
+    const supabase = supabase.createClient(
+      document.getElementById("SUPABASE_URL").value,
+      document.getElementById("SUPABASE_ANON_KEY").value
+    );
+
+    window.onload = () => {
+      const qrReader = new Html5QrcodeScanner("reader", {
+        fps: 10,
+        qrbox: 250,
+      }, false);
+      qrReader.render(
         (decodedText) => {
           document.getElementById("tagId").value = decodedText;
-          html5QrCode.stop();
-          document.getElementById("reader").innerHTML = "<p>QR code scanned successfully!</p>";
+          qrReader.clear();
+          document.getElementById("reader").innerHTML = "✅ QR scanned.";
         },
-        (errorMessage) => {
-          console.log("QR error: ", errorMessage);
-        }
-      ).catch((err) => {
-        console.error("Unable to start scanner", err);
-      });
-    }
+        (error) => {}
+      );
+    };
 
-    document.getElementById("tagForm").addEventListener("submit", function (e) {
+    document.getElementById("photos").addEventListener("change", function () {
+      const preview = document.getElementById("preview");
+      preview.innerHTML = "";
+      [...this.files].forEach(file => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const img = document.createElement("img");
+          img.src = e.target.result;
+          preview.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    document.getElementById("tagForm").addEventListener("submit", async function (e) {
       e.preventDefault();
-      alert("This is a frontend placeholder only. Backend upload to Supabase not yet connected.");
+      const tagId = document.getElementById("tagId").value.trim();
+      const tagType = document.getElementById("tagType").value;
+      const equipment = document.getElementById("equipment").value;
+      const reason = document.getElementById("reason").value;
+      const addedBy = document.getElementById("addedBy").value;
+      const area = document.getElementById("area").value;
+      const gps = document.getElementById("gps").value;
+      const timestamp = new Date().toISOString();
+      const photos = document.getElementById("photos").files;
+
+      const info = {
+        tagId, tagType, equipment, reason, addedBy, area, gps, timestamp
+      };
+
+      const infoBlob = new Blob([JSON.stringify(info, null, 2)], { type: "application/json" });
+      const { error: infoError } = await supabase.storage
+        .from("tag-public")
+        .upload(`${tagId}/info.json`, infoBlob, { upsert: true });
+
+      if (infoError) return alert("❌ Info upload failed: " + infoError.message);
+
+      for (let i = 0; i < photos.length; i++) {
+        const file = photos[i];
+        const ext = file.name.split('.').pop();
+        const path = `${tagId}/photo${i + 1}.${ext}`;
+        const { error: photoErr } = await supabase.storage
+          .from("tag-public")
+          .upload(path, file, { upsert: true });
+        if (photoErr) return alert("❌ Photo upload failed: " + photoErr.message);
+      }
+
+      alert("✅ Tag registered!");
+      this.reset();
+      document.getElementById("preview").innerHTML = "";
     });
   </script>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-  const supabaseUrl = document.getElementById("SUPABASE_URL").value;
-  const supabaseKey = document.getElementById("SUPABASE_ANON_KEY").value;
-  const supabase = supabase.createClient(supabaseUrl, supabaseKey);
-
-  document.getElementById("tagForm").addEventListener("submit", async function (e) {
-    e.preventDefault();
-
-    const tagId = document.getElementById("tagId").value.trim();
-    const tagType = document.getElementById("tagType").value;
-    const equipment = document.getElementById("equipment").value;
-    const reason = document.getElementById("reason").value;
-    const addedBy = document.getElementById("addedBy").value;
-    const area = document.getElementById("area").value;
-    const gps = document.getElementById("gps").value;
-    const timestamp = new Date().toISOString();
-    const photos = document.getElementById("photos").files;
-
-    if (!tagId) {
-      alert("Please scan a QR code to get the Tag ID.");
-      return;
-    }
-
-    const info = {
-      tagId,
-      tagType,
-      equipment,
-      reason,
-      addedBy,
-      area,
-      gps,
-      timestamp
-    };
-
-    const infoBlob = new Blob([JSON.stringify(info, null, 2)], { type: "application/json" });
-    const { error: infoError } = await supabase.storage
-      .from("tag-public")
-      .upload(`${tagId}/info.json`, infoBlob, { upsert: true, contentType: "application/json" });
-
-    if (infoError) {
-      alert("Failed to upload tag info: " + infoError.message);
-      return;
-    }
-
-    for (let i = 0; i < photos.length; i++) {
-      const photo = photos[i];
-      const ext = photo.name.split('.').pop();
-      const path = `${tagId}/photo${i + 1}.${ext}`;
-
-      const { error: photoError } = await supabase.storage
-        .from("tag-public")
-        .upload(path, photo, { upsert: true });
-
-      if (photoError) {
-        alert("Failed to upload photo: " + photoError.message);
-        return;
-      }
-    }
-
-    alert("✅ Tag successfully registered!");
-    document.getElementById("tagForm").reset();
-    document.getElementById("reader").innerHTML = "";
-  });
-</script>
-
+  <div id="reader" style="margin-top:20px;"></div>
 </body>
 </html>
