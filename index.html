@@ -67,13 +67,22 @@
           <p><strong>Timestamp:</strong> ${data.timestamp}</p>
         `;
 
-        // Attempt to load multiple images: photo1.png, photo2.png, photo3.png
+        // Attempt to load multiple images: photo1.png or photo1.jpg, etc.
         const maxPhotos = 5;
         for (let i = 1; i <= maxPhotos; i++) {
-          const imageUrl = `${bucketUrl}/${tagId}/photo${i}.png`;
-          const imgCheck = await fetch(imageUrl);
-          if (imgCheck.ok) {
-            html += `<img src="${imageUrl}" alt="Tag Photo ${i}" />`;
+          let imgUrlPng = `${bucketUrl}/${tagId}/photo${i}.png`;
+          let imgUrlJpg = `${bucketUrl}/${tagId}/photo${i}.jpg`;
+
+          const pngRes = await fetch(imgUrlPng);
+          if (pngRes.ok) {
+            html += `<img src="${imgUrlPng}" alt="Tag Photo ${i}" />`;
+            continue;
+          }
+
+          const jpgRes = await fetch(imgUrlJpg);
+          if (jpgRes.ok) {
+            html += `<img src="${imgUrlJpg}" alt="Tag Photo ${i}" />`;
+            continue;
           }
         }
 
