@@ -262,14 +262,13 @@
         }
 
         photosInput.addEventListener('change', (event) => {
-            previewContainer.innerHTML = '';
             const files = event.target.files;
-            for (let i = 0; i < files.length; i++) {
+            Array.from(files).forEach(file => {
                 const img = document.createElement('img');
-                img.src = URL.createObjectURL(files[i]);
+                img.src = URL.createObjectURL(file);
                 img.className = 'thumbnail';
                 previewContainer.appendChild(img);
-            }
+            });
         });
 
         getGpsButton.addEventListener('click', () => {
