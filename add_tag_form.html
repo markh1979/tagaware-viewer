@@ -312,4 +312,107 @@
                 isScanning = true;
 
                 html5QrcodeScanner = new Html5Qrcode('qr-reader');
-                html5QrcodeScanner.start
+                html5QrcodeScanner.start(
+                    { facingMode: 'environment' },
+                    { fps: 10, qrbox: { width: 250, height: 250 } },
+                    (decodedText) => {
+                        tagIdInput.value = decodedText;
+                        stopScanner();
+                    },
+                    (error) => {
+                        showMessage('QR scan error: ' + error, true);
+                        stopScanner();
+                    }
+                ).catch((err) => {
+                    showMessage('Failed to start QR scanner: ' + err.message, true);
+                    stopScanner();
+                });
+            } else {
+                stopScanner();
+            }
+        });
+
+        function stopScanner() {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    qrReader.style.display = 'none';
+                    startScanButton.textContent = 'Scan QR Code';
+                    isScanning = false;
+                    html5QrcodeScanner = null;
+                }).catch((err) => {
+                    showMessage('Error stopping QR scanner: ' + err, true);
+                });
+            }
+        }
+
+        photosInput.addEventListener('change', (event) => {
+            const files = event.target.files;
+            Array.from(files).forEach(file => {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.className = 'thumbnail';
+                previewContainer.appendChild(img);
+            });
+        });
+
+        getGpsButton.addEventListener('click', () => {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const { latitude, longitude } = position.coords;
+                        gpsCoordinatesInput.value = `${latitude}, ${longitude}`;
+                    },
+                    (error) => {
+                        showMessage('Error getting GPS: ' + error.message, true);
+                    }
+                );
+            } else {
+                showMessage('Geolocation is not supported by this browser.', true);
+            }
+        });
+
+        tagForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formData = new FormData(tagForm);
+            const tagData = {
+                tagId: formData.get('tag-id'),
+                tagType: formData.get('tag-type'),
+                equipmentName: formData.get('equipment-name'),
+                reason: formData.get('reason'),
+                addedBy: formData.get('added-by'),
+                phoneNumber: formData.get('phone-number'),
+                email: formData.get('email'),
+                area: formData.get('area'),
+                gpsCoordinates: formData.get('gps-coordinates'),
+                timestamp: new Date().toISOString()
+            };
+
+            try {
+                const { error: jsonError } = await supabase.storage
+                    .from('tag-public')
+                    .upload(`tags/${tagData.tagId}/info.json`, new Blob([JSON.stringify(tagData)], { type: 'application/json' }), {
+                        contentType: 'application/json',
+                        upsert: true
+                    });
+
+                if (jsonError) throw jsonError;
+
+                const photos = photosInput.files;
+                for (let i = 0; i < photos.length; i++) {
+                    const { error: photoError } = await supabase.storage
+                        .from('tag-public')
+                        .upload(`tags/${tagData.tagId}/photo${i + 1}.jpg`, photos[i], {
+                            contentType: 'image/jpeg',
+                            upsert: true
+                        });
+                    if (photoError) throw photoError;
+                }
+
+                showMessage('Tag registered successfully!');
+            } catch (error) {
+                showMessage(`Error uploading data: ${error.message}. Please ensure the 'tag-public' bucket allows INSERT and UPDATE for the 'anon' role in Supabase storage policies.`, true);
+            }
+        });
+    </script>
+</body>
+</html>
