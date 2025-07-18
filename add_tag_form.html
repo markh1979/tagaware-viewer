@@ -206,7 +206,9 @@
     <div class="container">
         <h1>Safety Tag Registration</h1>
         <button id="start-scan">Scan QR Code</button>
+        <button id="upload-qr">Upload QR Code Image</button>
         <div id="qr-reader"></div>
+        <input type="file" id="qr-image" accept="image/*" style="display: none;">
         <form id="tag-form">
             <div class="form-group">
                 <label for="tag-id">Tag ID</label>
@@ -274,7 +276,9 @@
         let isScanning = false;
 
         const startScanButton = document.getElementById('start-scan');
+        const uploadQrButton = document.getElementById('upload-qr');
         const qrReader = document.getElementById('qr-reader');
+        const qrImageInput = document.getElementById('qr-image');
         const tagForm = document.getElementById('tag-form');
         const tagIdInput = document.getElementById('tag-id');
         const photosInput = document.getElementById('photos');
@@ -313,8 +317,8 @@
 
                 html5QrcodeScanner = new Html5Qrcode('qr-reader');
                 const config = {
-                    fps: 8,
-                    qrbox: (viewfinderWidth) => Math.min(200, viewfinderWidth * 0.6),
+                    fps: 6,
+                    qrbox: 200,
                     rememberLastUsedCamera: true,
                     supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
                     experimentalFeatures: {
@@ -322,7 +326,7 @@
                     }
                 };
                 html5QrcodeScanner.start(
-                    { facingMode: 'environment' },
+                    { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
                     config,
                     (decodedText) => {
                         tagIdInput.value = decodedText;
@@ -357,6 +361,24 @@
                 });
             }
         }
+
+        uploadQrButton.addEventListener('click', () => {
+            qrImageInput.click();
+        });
+
+        qrImageInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                try {
+                    const result = await Html5Qrcode.scanImageFromDataUrl(URL.createObjectURL(file));
+                    tagIdInput.value = result;
+                    showMessage('QR code from image scanned successfully!', false);
+                } catch (error) {
+                    showMessage('Failed to scan QR code from image: ' + error, true);
+                }
+                qrImageInput.value = ''; // Reset input
+            }
+        });
 
         photosInput.addEventListener('change', (event) => {
             const files = event.target.files;
