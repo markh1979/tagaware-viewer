@@ -206,7 +206,6 @@
     <div class="container">
         <h1>Safety Tag Registration</h1>
         <button id="start-scan">Scan QR Code</button>
-        <button id="upload-qr">Upload QR Code Image</button>
         <div id="qr-reader"></div>
         <input type="file" id="qr-image" accept="image/*" style="display: none;">
         <form id="tag-form">
@@ -364,9 +363,7 @@ const supabase = window.supabase.createClient('https://qzjoylehnxitrddwmcqp.supa
             }
         }
 
-        uploadQrButton.addEventListener('click', () => {
-            qrImageInput.click();
-        });
+        
 
         qrImageInput.addEventListener('change', async (event) => {
             const file = event.target.files[0];
