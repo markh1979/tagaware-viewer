@@ -313,8 +313,8 @@
 
                 html5QrcodeScanner = new Html5Qrcode('qr-reader');
                 const config = {
-                    fps: 15,
-                    qrbox: { width: 300, height: 300 },
+                    fps: 10,
+                    qrbox: (viewfinderWidth) => Math.min(250, viewfinderWidth * 0.7),
                     rememberLastUsedCamera: true,
                     supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
                 };
@@ -329,12 +329,12 @@
                     (error) => {
                         showMessage('QR scan error: ' + error, true);
                         if (error.includes('No MultiFormat Readers')) {
-                            showMessage('Please ensure the QR code is clear and in view. Try adjusting lighting or distance.', true);
+                            showMessage('QR code not detected. Ensure it’s clear, well-lit, and in view. Try again.', true);
                         }
                         stopScanner();
                     }
                 ).catch((err) => {
-                    showMessage('Failed to start QR scanner: ' + err.message, true);
+                    showMessage('Failed to start QR scanner: ' + err.message + '. Check camera permissions and retry.', true);
                     stopScanner();
                 });
             } else {
