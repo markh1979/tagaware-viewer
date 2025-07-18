@@ -1,17 +1,21 @@
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang='en'>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset='UTF-8'/>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'/>
   <title>Add Tag - TagAware</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
-    label { display: block; margin-top: 15px; }
-    input, select, textarea { width: 100%; padding: 8px; margin-top: 5px; }
-    #preview img { max-height: 100px; margin: 5px; }
+    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; background: #f5f5f5; }
+    label { display: block; margin-top: 15px; font-weight: bold; }
+    input, select, textarea, button {
+      width: 100%; padding: 10px; margin-top: 5px;
+      border: 1px solid #ccc; border-radius: 4px;
+      box-sizing: border-box;
+    }
+    button { background-color: #007bff; color: white; border: none; cursor: pointer; }
+    button:hover { background-color: #0056b3; }
+    #preview img { max-height: 100px; margin: 5px; border-radius: 6px; border: 1px solid #ccc; }
     #reader { margin-top: 20px; }
-    .scan-btn { background: #333; color: white; padding: 10px 15px; border: none; border-radius: 5px; margin-top: 10px; }
   </style>
 </head>
 <body>
@@ -20,9 +24,9 @@
     <input type="hidden" id="SUPABASE_URL" value="https://qzjoylehnxitrddwmcqp.supabase.co" />
     <input type="hidden" id="SUPABASE_ANON_KEY" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6am95bGVobnhpdHJkZHdtY3FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1NTIzMDksImV4cCI6MjA2ODEyODMwOX0.6RSKoL97XuUiA46knx5Sa20i9JCCE94hY-Dt7Iiaj64" />
 
-    <label for="tagId">Tag ID (from QR):</label>
+    <label for="tagId">Tag ID (scanned from QR):</label>
     <input type="text" id="tagId" name="tagId" readonly required />
-    <button type="button" class="scan-btn" onclick="startScanner()">📷 Scan QR Code</button>
+    <button type="button" onclick="startQRScanner()">Scan QR Code</button>
     <div id="reader"></div>
 
     <label for="tagType">Tag Type:</label>
@@ -41,20 +45,20 @@
     <label for="reason">Reason:</label>
     <textarea id="reason" required></textarea>
 
-    <label for="addedBy">Added By (Name):</label>
+    <label for="addedBy">Added By:</label>
     <input type="text" id="addedBy" required />
 
-    <label for="area">Area Name:</label>
+    <label for="area">Area:</label>
     <input type="text" id="area" required />
 
     <label for="gps">GPS Coordinates:</label>
     <input type="text" id="gps" required />
 
-    <label for="photos">Upload up to 5 Photos:</label>
-    <input type="file" id="photos" accept="image/*" multiple />
+    <label for="photos">Upload Photos (up to 5):</label>
+    <input type="file" id="photos" name="photos" accept="image/*" multiple />
     <div id="preview"></div>
 
-    <button type="submit">Register Tag</button>
+    <button type="submit">Submit Tag</button>
   </form>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -65,33 +69,27 @@
       document.getElementById("SUPABASE_ANON_KEY").value
     );
 
-    let html5QrCode;
+    let qrScanner;
 
-    async function startScanner() {
-      const readerDiv = document.getElementById("reader");
-      readerDiv.innerHTML = "";
-      if (html5QrCode) {
-        await html5QrCode.stop();
-      }
+    function startQRScanner() {
+      const readerElement = document.getElementById("reader");
+      readerElement.innerHTML = "";
+      qrScanner = new Html5Qrcode("reader");
 
-      html5QrCode = new Html5Qrcode("reader");
-
-      html5QrCode.start(
+      qrScanner.start(
         { facingMode: "environment" },
         { fps: 10, qrbox: 250 },
         (decodedText) => {
           document.getElementById("tagId").value = decodedText;
-          html5QrCode.stop().then(() => {
-            readerDiv.innerHTML = "✅ QR Code Scanned";
-          }).catch(err => {
-            console.error("Stop failed:", err);
-          });
+          qrScanner.stop().then(() => {
+            readerElement.innerHTML = "✅ QR Code Scanned";
+          }).catch(console.error);
         },
         (errorMessage) => {
-          console.log("QR scan error", errorMessage);
+          console.warn("QR error:", errorMessage);
         }
-      ).catch(err => {
-        readerDiv.innerHTML = "<p style='color:red'>Camera error: " + err + "</p>";
+      ).catch((err) => {
+        readerElement.innerHTML = "Camera error: " + err;
       });
     }
 
@@ -100,7 +98,7 @@
       preview.innerHTML = "";
       Array.from(this.files).forEach((file) => {
         const reader = new FileReader();
-        reader.onload = function (e) {
+        reader.onload = (e) => {
           const img = document.createElement("img");
           img.src = e.target.result;
           preview.appendChild(img);
@@ -128,20 +126,20 @@
         .from("tag-public")
         .upload(`${tagId}/info.json`, infoBlob, { upsert: true });
 
-      if (infoError) return alert("❌ Info upload failed: " + infoError.message);
+      if (infoError) return alert("❌ Failed to upload tag info: " + infoError.message);
 
       for (let i = 0; i < photos.length; i++) {
         const file = photos[i];
         const ext = file.name.split('.').pop();
         const path = `${tagId}/photo${i + 1}.${ext}`;
-        const { error: photoErr } = await supabase.storage
+        const { error: photoError } = await supabase.storage
           .from("tag-public")
           .upload(path, file, { upsert: true });
-        if (photoErr) return alert("❌ Photo upload failed: " + photoErr.message);
+        if (photoError) return alert("❌ Failed to upload photo: " + photoError.message);
       }
 
-      alert("✅ Tag registered!");
-      this.reset();
+      alert("✅ Tag successfully registered!");
+      document.getElementById("tagForm").reset();
       document.getElementById("preview").innerHTML = "";
       document.getElementById("reader").innerHTML = "";
     });
