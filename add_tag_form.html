@@ -263,7 +263,8 @@
         </form>
         <div id="message"></div>
     </div>
-    <div id="success-modal">
+    <div id="qr-reader-temp" style="display:none;"></div>
+<div id="success-modal">
         <div class="modal-content">
             <p>Tag registered successfully!</p>
             <button id="modal-ok">OK</button>
@@ -271,7 +272,8 @@
     </div>
 
     <script>
-        const supabase = window.supabase.createClient('https://qzjoylehnxitrddwmcqp.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6am95bGVobnhpdHJkZHdtY3FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1NTIzMDksImV4cCI6MjA2ODEyODMwOX0.6RSKoL97XuUiA46knx5Sa20i9JCCE94hY-Dt7Iiaj64');
+        const { Html5Qrcode, Html5QrcodeScanType } = window;
+const supabase = window.supabase.createClient('https://qzjoylehnxitrddwmcqp.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6am95bGVobnhpdHJkZHdtY3FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1NTIzMDksImV4cCI6MjA2ODEyODMwOX0.6RSKoL97XuUiA46knx5Sa20i9JCCE94hY-Dt7Iiaj64');
         let html5QrcodeScanner = null;
         let isScanning = false;
 
@@ -370,9 +372,11 @@
             const file = event.target.files[0];
             if (file) {
                 try {
-                    const result = await Html5Qrcode.scanImageFromDataUrl(URL.createObjectURL(file));
+                    const html5Qr = new Html5Qrcode("qr-reader-temp");
+                    const result = await html5Qr.scanFile(file, true);
                     tagIdInput.value = result;
                     showMessage('QR code from image scanned successfully!', false);
+                    await html5Qr.clear();
                 } catch (error) {
                     showMessage('Failed to scan QR code from image: ' + error, true);
                 }
