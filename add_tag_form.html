@@ -313,10 +313,13 @@
 
                 html5QrcodeScanner = new Html5Qrcode('qr-reader');
                 const config = {
-                    fps: 10,
-                    qrbox: (viewfinderWidth) => Math.min(250, viewfinderWidth * 0.7),
+                    fps: 8,
+                    qrbox: (viewfinderWidth) => Math.min(200, viewfinderWidth * 0.6),
                     rememberLastUsedCamera: true,
-                    supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+                    supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+                    experimentalFeatures: {
+                        useBarCodeDetectorIfSupported: true
+                    }
                 };
                 html5QrcodeScanner.start(
                     { facingMode: 'environment' },
@@ -329,7 +332,7 @@
                     (error) => {
                         showMessage('QR scan error: ' + error, true);
                         if (error.includes('No MultiFormat Readers')) {
-                            showMessage('QR code not detected. Ensure it’s clear, well-lit, and in view. Try again.', true);
+                            showMessage('QR code not detected. Tap to focus, ensure good lighting, and try again.', true);
                         }
                         stopScanner();
                     }
