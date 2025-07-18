@@ -1,148 +1,334 @@
-<!DOCTYPE html>
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Add Tag - TagAware</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; background: #f5f5f5; }
-    label { display: block; margin-top: 15px; font-weight: bold; }
-    input, select, textarea, button {
-      width: 100%; padding: 10px; margin-top: 5px;
-      border: 1px solid #ccc; border-radius: 4px;
-      box-sizing: border-box;
-    }
-    button { background-color: #007bff; color: white; border: none; cursor: pointer; }
-    button:hover { background-color: #0056b3; }
-    #preview img { max-height: 100px; margin: 5px; border-radius: 6px; border: 1px solid #ccc; }
-    #reader { margin-top: 20px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mining/Construction Safety Tag Registration</title>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            font-size: 24px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        input[readonly] {
+            background-color: #e9ecef;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        #qr-reader {
+            display: none;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto 15px;
+        }
+        #preview-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .thumbnail {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        #message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px;
+            }
+            h1 {
+                font-size: 20px;
+            }
+            button {
+                font-size: 14px;
+            }
+        }
+    </style>
 </head>
 <body>
-  <h2>Add New Tag</h2>
-  <form id="tagForm">
-    <input type="hidden" id="SUPABASE_URL" value="https://qzjoylehnxitrddwmcqp.supabase.co" />
-    <input type="hidden" id="SUPABASE_ANON_KEY" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6am95bGVobnhpdHJkZHdtY3FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1NTIzMDksImV4cCI6MjA2ODEyODMwOX0.6RSKoL97XuUiA46knx5Sa20i9JCCE94hY-Dt7Iiaj64" />
+    <div class="container">
+        <h1>Safety Tag Registration</h1>
+        <button id="start-scan">Scan QR Code</button>
+        <div id="qr-reader"></div>
+        <form id="tag-form">
+            <div class="form-group">
+                <label for="tag-id">Tag ID</label>
+                <input type="text" id="tag-id" name="tag-id" readonly required>
+            </div>
+            <div class="form-group">
+                <label for="tag-type">Tag Type</label>
+                <select id="tag-type" name="tag-type" required>
+                    <option value="">Select Tag Type</option>
+                    <option value="Information tag">Information tag</option>
+                    <option value="Out of service tag">Out of service tag</option>
+                    <option value="Danger tag">Danger tag</option>
+                    <option value="Isolation tag">Isolation tag</option>
+                    <option value="Scaffold tag">Scaffold tag</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="equipment-name">Equipment Name</label>
+                <input type="text" id="equipment-name" name="equipment-name" required>
+            </div>
+            <div class="form-group">
+                <label for="reason">Reason</label>
+                <textarea id="reason" name="reason" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="added-by">Added By</label>
+                <input type="text" id="added-by" name="added-by" required>
+            </div>
+            <div class="form-group">
+                <label for="area">Area</label>
+                <input type="text" id="area" name="area" required>
+            </div>
+            <div class="form-group">
+                <label for="gps-coordinates">GPS Coordinates</label>
+                <input type="text" id="gps-coordinates" name="gps-coordinates" readonly>
+                <button type="button" id="get-gps">Get GPS</button>
+            </div>
+            <div class="form-group">
+                <label for="photos">Upload Photos</label>
+                <input type="file" id="photos" name="photos" accept="image/*" multiple>
+                <div id="preview-container"></div>
+            </div>
+            <button type="submit">Submit Tag</button>
+        </form>
+        <div id="message"></div>
+    </div>
 
-    <label for="tagId">Tag ID (from QR):</label>
-    <input type="text" id="tagId" name="tagId" readonly required />
-    <button type="button" onclick="startQRScanner()">Scan QR Code</button>
-    <div id="reader"></div>
+    <script>
+        const supabase = window.supabase.createClient('https://qzjoylehnxitrddwmcqp.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6am95bGVobnhpdHJkZHdtY3FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1NTIzMDksImV4cCI6MjA2ODEyODMwOX0.6RSKoL97XuUiA46knx5Sa20i9JCCE94hY-Dt7Iiaj64');
+        let html5QrcodeScanner = null;
+        let isScanning = false;
 
-    <label for="tagType">Tag Type:</label>
-    <select id="tagType" name="tagType" required>
-      <option value="">-- Select Tag Type --</option>
-      <option value="Information tag">Information tag</option>
-      <option value="Out of service tag">Out of service tag</option>
-      <option value="Danger tag">Danger tag</option>
-      <option value="Isolation tag">Isolation tag</option>
-      <option value="Scaffold tag">Scaffold tag</option>
-    </select>
+        const startScanButton = document.getElementById('start-scan');
+        const qrReader = document.getElementById('qr-reader');
+        const tagForm = document.getElementById('tag-form');
+        const tagIdInput = document.getElementById('tag-id');
+        const photosInput = document.getElementById('photos');
+        const previewContainer = document.getElementById('preview-container');
+        const messageDiv = document.getElementById('message');
+        const getGpsButton = document.getElementById('get-gps');
+        const gpsCoordinatesInput = document.getElementById('gps-coordinates');
 
-    <label for="equipment">Equipment Name:</label>
-    <input type="text" id="equipment" required />
-
-    <label for="reason">Reason:</label>
-    <textarea id="reason" required></textarea>
-
-    <label for="addedBy">Added By:</label>
-    <input type="text" id="addedBy" required />
-
-    <label for="area">Area:</label>
-    <input type="text" id="area" required />
-
-    <label for="gps">GPS Coordinates:</label>
-    <input type="text" id="gps" required />
-
-    <label for="photos">Upload Photos (up to 5):</label>
-    <input type="file" id="photos" name="photos" accept="image/*" multiple />
-    <div id="preview"></div>
-
-    <button type="submit">Submit Tag</button>
-  </form>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://unpkg.com/html5-qrcode"></script>
-  <script>
-    const supabase = supabase.createClient(
-      document.getElementById("SUPABASE_URL").value,
-      document.getElementById("SUPABASE_ANON_KEY").value
-    );
-
-    let qrScanner;
-
-    function startQRScanner() {
-      const readerElement = document.getElementById("reader");
-      readerElement.innerHTML = "";
-      qrScanner = new Html5Qrcode("reader");
-
-      qrScanner.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
-        (decodedText) => {
-          document.getElementById("tagId").value = decodedText;
-          qrScanner.stop().then(() => {
-            readerElement.innerHTML = "✅ QR Code Scanned";
-          }).catch(console.error);
-        },
-        (errorMessage) => {
-          console.warn("QR error:", errorMessage);
+        function showMessage(text, isError = false) {
+            messageDiv.textContent = text;
+            messageDiv.className = isError ? 'error' : 'success';
+            setTimeout(() => {
+                messageDiv.textContent = '';
+                messageDiv.className = '';
+            }, 5000);
         }
-      ).catch((err) => {
-        readerElement.innerHTML = "Camera error: " + err;
-      });
-    }
 
-    document.getElementById("photos").addEventListener("change", function () {
-      const preview = document.getElementById("preview");
-      preview.innerHTML = "";
-      Array.from(this.files).forEach((file) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const img = document.createElement("img");
-          img.src = e.target.result;
-          preview.appendChild(img);
-        };
-        reader.readAsDataURL(file);
-      });
-    });
+        startScanButton.addEventListener('click', () => {
+            if (!isScanning) {
+                qrReader.style.display = 'block';
+                startScanButton.textContent = 'Stop Scanning';
+                isScanning = true;
 
-    document.getElementById("tagForm").addEventListener("submit", async function (e) {
-      e.preventDefault();
-      const tagId = document.getElementById("tagId").value.trim();
-      const tagType = document.getElementById("tagType").value;
-      const equipment = document.getElementById("equipment").value;
-      const reason = document.getElementById("reason").value;
-      const addedBy = document.getElementById("addedBy").value;
-      const area = document.getElementById("area").value;
-      const gps = document.getElementById("gps").value;
-      const timestamp = new Date().toISOString();
-      const photos = document.getElementById("photos").files;
+                html5QrcodeScanner = new Html5Qrcode('qr-reader');
+                html5QrcodeScanner.start(
+                    { facingMode: 'environment' },
+                    { fps: 10, qrbox: { width: 250, height: 250 } },
+                    (decodedText) => {
+                        tagIdInput.value = decodedText;
+                        stopScanner();
+                    },
+                    (error) => {
+                        console.warn('QR Code scan error:', error);
+                    }
+                ).catch((err) => {
+                    showMessage('Error starting QR scanner: ' + err, true);
+                    stopScanner();
+                });
+            } else {
+                stopScanner();
+            }
+        });
 
-      const info = { tagId, tagType, equipment, reason, addedBy, area, gps, timestamp };
-      const infoBlob = new Blob([JSON.stringify(info, null, 2)], { type: "application/json" });
+        function stopScanner() {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    qrReader.style.display = 'none';
+                    startScanButton.textContent = 'Scan QR Code';
+                    isScanning = false;
+                    html5QrcodeScanner = null;
+                }).catch((err) => {
+                    showMessage('Error stopping QR scanner: ' + err, true);
+                });
+            }
+        }
 
-      const { error: infoError } = await supabase.storage
-        .from("tag-public")
-        .upload(`${tagId}/info.json`, infoBlob, { upsert: true });
+        photosInput.addEventListener('change', (event) => {
+            previewContainer.innerHTML = '';
+            const files = event.target.files;
+            for (let i = 0; i < files.length; i++) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(files[i]);
+                img.className = 'thumbnail';
+                previewContainer.appendChild(img);
+            }
+        });
 
-      if (infoError) return alert("❌ Failed to upload tag info: " + infoError.message);
+        getGpsButton.addEventListener('click', () => {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const { latitude, longitude } = position.coords;
+                        gpsCoordinatesInput.value = `${latitude}, ${longitude}`;
+                    },
+                    (error) => {
+                        showMessage('Error getting GPS coordinates: ' + error.message, true);
+                    }
+                );
+            } else {
+                showMessage('Geolocation is not supported by this browser.', true);
+            }
+        });
 
-      for (let i = 0; i < photos.length; i++) {
-        const file = photos[i];
-        const ext = file.name.split('.').pop();
-        const path = `${tagId}/photo${i + 1}.${ext}`;
-        const { error: photoError } = await supabase.storage
-          .from("tag-public")
-          .upload(path, file, { upsert: true });
-        if (photoError) return alert("❌ Failed to upload photo: " + photoError.message);
-      }
+        tagForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formData = new FormData(tagForm);
+            const tagData = {
+                tagId: formData.get('tag-id'),
+                tagType: formData.get('tag-type'),
+                equipmentName: formData.get('equipment-name'),
+                reason: formData.get('reason'),
+                addedBy: formData.get('added-by'),
+                area: formData.get('area'),
+                gpsCoordinates: formData.get('gps-coordinates'),
+                timestamp: new Date().toISOString()
+            };
 
-      alert("✅ Tag successfully registered!");
-      document.getElementById("tagForm").reset();
-      document.getElementById("preview").innerHTML = "";
-      document.getElementById("reader").innerHTML = "";
-    });
-  </script>
+            try {
+                const { error: jsonError } = await supabase.storage
+                    .from('tag-public')
+                    .upload(`tags/${tagData.tagId}/info.json`, JSON.stringify(tagData), {
+                        contentType: 'application/json'
+                    });
+
+                if (jsonError) throw jsonError;
+
+                const photos = photosInput.files;
+                for (let i = 0; i < photos.length; i++) {
+                    const { error: photoError } = await supabase.storage
+                        .from('tag-public')
+                        .upload(`tags/${tagData.tagId}/photo${i + 1}.jpg`, photos[i], {
+                            contentType: 'image/jpeg'
+                        });
+                    if (photoError) throw photoError;
+                }
+
+                showMessage('Tag registered successfully!');
+                tagForm.reset();
+                previewContainer.innerHTML = '';
+                stopScanner();
+            } catch (error) {
+                showMessage('Error uploading data: ' + error.message, true);
+            }
+        });
+    </script>
 </body>
 </html>
